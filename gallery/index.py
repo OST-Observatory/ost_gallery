@@ -19,6 +19,10 @@ from gallery.slug import make_slug
 REQUIRED_FIELDS = ("OBJECT", "DATE", "CLASS")
 
 
+def _is_animated_gif(img: Image.Image) -> bool:
+    return bool(getattr(img, "is_animated", False))
+
+
 def _save_webp(img: Image.Image, dest: Path, max_width: int | None = None) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
     working = img.convert("RGB") if img.mode in ("RGBA", "P", "LA") else img
@@ -57,6 +61,7 @@ def _process_image(
     log: BuildLog,
 ) -> tuple[str, str, str] | None:
     stem = image_path.stem
+    suffix = image_path.suffix.lower()
     label = f"{rel_folder}/{image_path.name}"
     thumb_rel = public_url(config.base_path, f"/media/thumbs/{rel_folder}/{stem}.webp")
     display_rel = public_url(config.base_path, f"/media/display/{rel_folder}/{stem}.webp")
@@ -70,13 +75,24 @@ def _process_image(
             with Image.open(image_path) as img:
                 img.load()
                 _log_image_warnings(caught, label, log)
+                animated_gif = suffix == ".gif" and _is_animated_gif(img)
+                if animated_gif:
+                    img.seek(0)
                 _save_webp(img, thumb_dest, config.thumb_max_width)
-                if config.display_max_width == 0:
-                    display_dest.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(image_path, display_dest.with_suffix(image_path.suffix))
+                if animated_gif:
+                    gif_display = display_dest.with_suffix(".gif")
+                    gif_display.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(image_path, gif_display)
                     display_rel = public_url(
                         config.base_path,
-                        f"/media/display/{rel_folder}/{stem}{image_path.suffix.lower()}",
+                        f"/media/display/{rel_folder}/{stem}.gif",
+                    )
+                elif config.display_max_width == 0:
+                    display_dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(image_path, display_dest.with_suffix(suffix))
+                    display_rel = public_url(
+                        config.base_path,
+                        f"/media/display/{rel_folder}/{stem}{suffix}",
                     )
                 else:
                     _save_webp(img, display_dest, config.display_max_width)

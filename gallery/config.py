@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from gallery.paths import normalize_base_path
 
-IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 
 CATEGORY_SLUGS = [
     "galaxies",

@@ -7,6 +7,7 @@ dist/
 dist.staging/
 dist.old/
 dist-subpath/
+dist-gif-test
 *.staging/
 *.old/
 .env

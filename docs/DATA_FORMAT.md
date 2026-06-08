@@ -15,7 +15,9 @@ DATA_DIR/
 
 Each observation night is a folder named `YYYY.MM.DD`. For every image file there must be a metadata file with the same base name and a `.txt` extension.
 
-Supported image formats: `.png`, `.jpg`, `.jpeg`, `.webp`
+Supported image formats: `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`
+
+Animated GIFs are kept as GIF for the detail and lightbox views (animation preserved). Grid thumbnails use the first frame as WebP.
 
 ## Metadata file (`.txt`)
 

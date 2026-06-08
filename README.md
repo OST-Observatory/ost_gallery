@@ -80,7 +80,7 @@ Copy `.env.example` to `.env` and adjust:
 
 See [docs/DATA_FORMAT.md](docs/DATA_FORMAT.md) for the full specification.
 
-Briefly: each date folder `YYYY.MM.DD` contains paired `name.png` (or `.jpg`) and `name.txt` files. Required metadata keys: `OBJECT`, `DATE`, `CLASS`.
+Briefly: each date folder `YYYY.MM.DD` contains paired image and metadata files (`name.png` + `name.txt`, or `.jpg`, `.gif`, …). Required metadata keys: `OBJECT`, `DATE`, `CLASS`.
 
 Optional repeated `OBJECT_INFO = Name | description` lines in each `.txt` file populate the **“Objects in this image”** section on detail pages. See [docs/DATA_FORMAT.md](docs/DATA_FORMAT.md) for formats (including description-only lines). The key `OBJECTS` is accepted as an alias.
 
@@ -106,7 +106,7 @@ Indexed 47 images, skipped 2, warnings 1
 ## Adding new images
 
 1. Create or use a date folder under `DATA_DIR`, e.g. `2026.06.03/`.
-2. Add `object_name.png` and `object_name.txt`.
+2. Add `object_name.png` (or `.jpg`, `.gif`, …) and `object_name.txt`.
 3. Run `python -m gallery build`.
 4. Deploy `OUTPUT_DIR` to your web server (see below).
 
@@ -205,11 +205,16 @@ When the gallery lives under a path on a larger site, Apache serves the built fi
 
     Alias /gallery /var/www/ost-gallery
 
+    # Default 404 for the main site (DocumentRoot)
+    ErrorDocument 404 /404.html
+
     <Directory /var/www/ost-gallery>
         Options -Indexes
         AllowOverride None
         Require all granted
         DirectoryIndex index.html
+        # 404 only for URLs under /gallery (overrides VirtualHost default here)
+        ErrorDocument 404 /gallery/404.html
     </Directory>
 
     <Directory /var/www/ost-gallery/media>
@@ -219,8 +224,6 @@ When the gallery lives under a path on a larger site, Apache serves the built fi
             ExpiresDefault "access plus 30 days"
         </IfModule>
     </Directory>
-
-    ErrorDocument 404 /gallery/404.html
 </VirtualHost>
 ```
 
