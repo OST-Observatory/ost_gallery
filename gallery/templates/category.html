@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% from "partials/grid.html" import image_grid with context %}
+
+{% block title %}{{ category_title }} — {{ site_title }}{% endblock %}
+
+{% block content %}
+<header class="page-header container">
+  <h1 class="page-title">{{ category_title }}</h1>
+</header>
+{{ image_grid(images) }}
+{% endblock %}

@@ -1,0 +1,7 @@
+OBJECT	= Jupiter
+DATE	= 2025.12.08
+CAT     =
+FILTER	= RGB
+CLASS	= planet
+EXTRA	= Video stack of 3000 frames; best 8% combined. Great Red Spot visible near the central meridian.
+TAKEN	= Marco

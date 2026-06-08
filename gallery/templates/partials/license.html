@@ -1,0 +1,17 @@
+{% macro license_link(license, prefix='', short_label=false) %}
+{% if license %}
+<a href="{{ license.url }}" rel="license noopener noreferrer" class="license-link" target="_blank">
+  {% if license.badge_src %}
+  <img
+    src="{{ license.badge_src }}"
+    alt="{{ license.short }}"
+    class="license-badge"
+    width="88"
+    height="31"
+    loading="lazy"
+  >
+  {% endif %}
+  <span class="license-link__text">{% if prefix %}{{ prefix }} {% endif %}<span class="license-link__name">{{ license.short if short_label else license.name }}</span></span>
+</a>
+{% endif %}
+{% endmacro %}

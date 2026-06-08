@@ -1,0 +1,47 @@
+{% from "partials/license.html" import license_link %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site_title }}{% endblock %}</title>
+  <meta name="description" content="{% block description %}{{ site_description }}{% endblock %}">
+  <link rel="stylesheet" href="/static/css/global.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-logo" href="/">{{ site_title }}</a>
+      <nav class="site-nav" aria-label="Main navigation">
+        <ul class="nav-list">
+          {% for item in nav_items %}
+          <li>
+            <a href="{{ item.href }}" class="nav-link{% if item.active %} nav-link--active{% endif %}">
+              {{ item.label }}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="site-main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <p class="site-footer__tagline">{{ t('footer.tagline') }}</p>
+      {% if site_license %}
+      <p class="site-footer__license">
+        {{ license_link(site_license, t('footer.licensePrefix')) }}
+      </p>
+      {% endif %}
+    </div>
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

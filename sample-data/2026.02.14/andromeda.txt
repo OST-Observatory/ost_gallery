@@ -1,0 +1,7 @@
+OBJECT	= Andromeda Galaxy
+DATE	= 2026.02.14
+CAT     = M 31
+FILTER	= LRGB
+CLASS	= galaxy
+EXTRA	= A wide-field mosaic assembled from twelve 10-minute luminance frames and RGB channels.
+TAKEN	= Rainer

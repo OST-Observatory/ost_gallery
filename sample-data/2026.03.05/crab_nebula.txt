@@ -1,0 +1,22 @@
+# name of the object (string)
+OBJECT	= Crab Nebula
+
+# date in format YYYY.MM.DD
+DATE	= 2026.03.05
+
+# catalogue(s), separate by comma
+CAT     = M 1
+
+# filters used (string)
+FILTER	= Halpha, OIII, SII
+
+# possible classes: nebula, galaxy, cluster, solar, etc
+CLASS	= nebula
+
+# extra information (string)
+EXTRA	= The image is a composite of 60 images, with a total exposure time of around five hours. Twenty images of five minutes each were taken for each filter.
+
+# information about the photographer (string)
+TAKEN	= Rainer
+
+OBJECT_INFO = M 1 | Supernova remnant in the constellation Taurus, the expanding cloud from a supernova recorded in 1054 CE.

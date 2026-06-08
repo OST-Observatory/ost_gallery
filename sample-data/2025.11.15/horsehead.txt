@@ -1,0 +1,7 @@
+OBJECT	= Horsehead Nebula
+DATE	= 2025.11.15
+CAT     = Barnard 33
+FILTER	= Halpha
+CLASS	= nebula
+EXTRA	= Narrowband hydrogen-alpha exposure highlighting the dark nebula silhouette.
+TAKEN	= Rainer

@@ -1,0 +1,9 @@
+OBJECT	= Pleiades
+DATE	= 2026.01.20
+CAT     = M 45
+FILTER	= RGB
+CLASS	= cluster
+EXTRA	= Open star cluster with reflection nebulosity visible around the brightest stars.
+TAKEN	= Anna
+
+OBJECT_INFO = M 45 | Open star cluster in Taurus, also known as the Seven Sisters

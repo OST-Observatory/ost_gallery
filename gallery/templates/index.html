@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "partials/grid.html" import image_grid with context %}
+
+{% block content %}
+{% if featured %}
+<section
+  class="hero"
+  id="hero-slideshow"
+  data-interval="{{ slide_interval_ms }}"
+  aria-label="Featured images"
+>
+  <div class="hero__slides">
+    {% for image in featured %}
+    <figure class="hero__slide{% if loop.first %} hero__slide--active{% endif %}" data-index="{{ loop.index0 }}">
+      <img
+        class="hero__img"
+        src="{{ image.imageSrc }}"
+        alt="{{ image.object }}"
+        {% if not loop.first %}loading="lazy"{% endif %}
+      >
+      <figcaption class="hero__caption">
+        <h2 class="hero__title">{{ image.object }}</h2>
+        <p class="hero__date">{{ image.date }}</p>
+        <a class="hero__cta" href="/image/{{ image.slug }}/">{{ t('hero.viewDetails') }}</a>
+      </figcaption>
+    </figure>
+    {% endfor %}
+    {% if featured|length > 1 %}
+    <div class="hero__dots" role="tablist" aria-label="Slide navigation">
+      {% for image in featured %}
+      <button
+        type="button"
+        class="hero__dot{% if loop.first %} hero__dot--active{% endif %}"
+        role="tab"
+        aria-selected="{{ 'true' if loop.first else 'false' }}"
+        aria-label="Show {{ image.object }}"
+        data-index="{{ loop.index0 }}"
+      ></button>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{{ image_grid(images) }}
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/hero-slideshow.js" defer></script>
+{% endblock %}

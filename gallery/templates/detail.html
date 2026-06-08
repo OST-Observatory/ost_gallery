@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% from "partials/license.html" import license_link %}
+
+{% block title %}{{ image.object }} — {{ site_title }}{% endblock %}
+{% block description %}{{ image.object }} — {{ image.date }}{% endblock %}
+
+{% block content %}
+<article class="detail container">
+  <figure class="detail__figure">
+    <button
+      type="button"
+      class="detail__img-btn"
+      id="detail-image-open"
+      data-full-src="{{ image.fullSrc }}"
+      aria-label="{{ t('detail.viewFull') }}"
+    >
+      <img
+        class="detail__img"
+        src="{{ image.imageSrc }}"
+        alt="{{ image.object }}"
+      >
+    </button>
+  </figure>
+
+  <dialog class="lightbox" id="image-lightbox" aria-label="{{ image.object }}">
+    <button type="button" class="lightbox__close" id="lightbox-close" aria-label="{{ t('detail.closeLightbox') }}">
+      <span aria-hidden="true">&times;</span>
+    </button>
+    <div class="lightbox__scroll">
+      <img
+        class="lightbox__img"
+        id="lightbox-image"
+        src="{{ image.fullSrc }}"
+        alt="{{ image.object }}"
+      >
+    </div>
+  </dialog>
+
+  <header class="detail__header">
+    <h1 class="detail__title">{{ image.object }}</h1>
+  </header>
+
+  <div class="detail__info-row{% if not image.objects %} detail__info-row--meta-only{% endif %}">
+    <div class="detail__info-box detail__info-box--meta">
+      <dl class="meta-list">
+        <div class="meta-list__row">
+          <dt>{{ t('detail.date') }}</dt>
+          <dd>{{ image.date }}</dd>
+        </div>
+        {% if image.catalog %}
+        <div class="meta-list__row">
+          <dt>{{ t('detail.catalog') }}</dt>
+          <dd>{{ image.catalog }}</dd>
+        </div>
+        {% endif %}
+        {% if image.filters %}
+        <div class="meta-list__row">
+          <dt>{{ t('detail.filters') }}</dt>
+          <dd>{{ image.filters }}</dd>
+        </div>
+        {% endif %}
+        {% if image.takenBy %}
+        <div class="meta-list__row">
+          <dt>{{ t('detail.takenBy') }}</dt>
+          <dd>{{ image.takenBy }}</dd>
+        </div>
+        {% endif %}
+        {% if image.credit %}
+        <div class="meta-list__row">
+          <dt>{{ t('detail.credit') }}</dt>
+          <dd>{{ image.credit }}</dd>
+        </div>
+        {% endif %}
+        {% if image.license %}
+        <div class="meta-list__row meta-list__row--license">
+          <dt>{{ t('detail.license') }}</dt>
+          <dd>
+            {{ license_link(image.license, short_label=true) }}
+          </dd>
+        </div>
+        {% endif %}
+      </dl>
+    </div>
+
+    {% if image.objects %}
+    <section class="detail__info-box detail__info-box--objects">
+      <h2 class="detail__heading">{{ t('detail.objectsHeading') }}</h2>
+      <ul class="object-list">
+        {% for obj in image.objects %}
+        <li class="object-item">
+          {% if obj.name %}
+          <h3 class="object-item__name">{{ obj.name }}</h3>
+          {% endif %}
+          {% if obj.description %}
+          <p class="object-item__desc{% if not obj.name %} object-item__desc--solo{% endif %}">{{ obj.description }}</p>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+  </div>
+
+  {% if image.extra %}
+  <section class="detail__section detail__extra-section">
+    <div class="detail__info-box detail__info-box--extra">
+      <h2 class="detail__heading">{{ t('detail.extraHeading') }}</h2>
+      <div class="detail__prose detail__extra">{{ image.extra }}</div>
+    </div>
+  </section>
+  {% endif %}
+
+  <nav class="detail__nav" aria-label="Back navigation">
+    <a href="/{{ image.category }}/">{{ t('detail.backCategory') }} {{ category_title }}</a>
+    <a href="/">{{ t('detail.back') }}</a>
+  </nav>
+</article>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/image-lightbox.js" defer></script>
+{% endblock %}

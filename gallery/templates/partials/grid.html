@@ -1,0 +1,28 @@
+{% macro image_grid(images) %}
+<section class="gallery-section">
+  {% if images %}
+  <ul class="image-grid">
+    {% for image in images %}
+    <li class="image-card">
+      <a href="/image/{{ image.slug }}/" class="image-card__link">
+        <img
+          class="image-card__img"
+          src="{{ image.thumbSrc }}"
+          alt="{{ image.object }}"
+          loading="lazy"
+          width="600"
+          height="450"
+        >
+        <span class="image-card__overlay">
+          <span class="image-card__title">{{ image.object }}</span>
+          <span class="image-card__date">{{ image.date }}</span>
+        </span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty-state">{{ t('grid.empty') }}</p>
+  {% endif %}
+</section>
+{% endmacro %}
