@@ -21,7 +21,7 @@
       <figcaption class="hero__caption">
         <h2 class="hero__title">{{ image.object }}</h2>
         <p class="hero__date">{{ image.date }}</p>
-        <a class="hero__cta" href="/image/{{ image.slug }}/">{{ t('hero.viewDetails') }}</a>
+        <a class="hero__cta" href="{{ pub('/image/' ~ image.slug ~ '/') }}">{{ t('hero.viewDetails') }}</a>
       </figcaption>
     </figure>
     {% endfor %}
@@ -47,5 +47,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/hero-slideshow.js" defer></script>
+<script src="{{ pub('/static/js/hero-slideshow.js') }}" defer></script>
 {% endblock %}

@@ -67,7 +67,8 @@ Copy `.env.example` to `.env` and adjust:
 | `SLIDE_INTERVAL_MS` | Slideshow interval (ms) | `6000` |
 | `THUMB_MAX_WIDTH` | Thumbnail width (px) | `600` |
 | `DISPLAY_MAX_WIDTH` | Detail image max width; `0` = copy original | `2400` |
-| `SITE_URL` | Canonical site URL (optional) | — |
+| `BASE_PATH` | URL prefix when not at site root (e.g. `/gallery`) | *(empty)* |
+| `SITE_URL` | Canonical site URL (optional); include `BASE_PATH` if set | — |
 | `SITE_TITLE` | Site title in header | `OST Gallery` |
 | `SITE_LICENSE_SHORT` | Short license label (e.g. CC BY-NC-SA 3.0) | `CC BY-NC-SA 3.0` |
 | `SITE_LICENSE_NAME` | Full license name in footer | Creative Commons … 3.0 License |
@@ -134,8 +135,12 @@ Set in `.env`:
 ```
 DATA_DIR=/var/gallery/data
 OUTPUT_DIR=/var/www/ost-gallery
+BASE_PATH=
+SITE_URL=https://gallery.example.org
 LOG_FILE=/var/log/ost-gallery-build.log
 ```
+
+For a subpath install (e.g. `https://www.myserver.com/gallery`), set `BASE_PATH=/gallery` and `SITE_URL=https://www.myserver.com/gallery`. After changing `BASE_PATH`, run a full build (not `--skip-index`) so media URLs in `gallery.json` are updated.
 
 ### 2. Build and deploy
 
@@ -186,6 +191,48 @@ For local development you can set `OUTPUT_DIR=./dist` and `ATOMIC_BUILD=1` in `.
 ```
 
 Directory-style URLs (`/nebulae/`, `/image/crab-nebula-2026-03-05/`) work without `mod_rewrite` because each route is a folder containing `index.html`.
+
+#### Subpath on an existing site (e.g. `/gallery`)
+
+When the gallery lives under a path on a larger site, Apache serves the built files via `Alias` instead of `DocumentRoot`:
+
+```apache
+<VirtualHost *:443>
+    ServerName www.meinserver.com
+    DocumentRoot /var/www/meinserver
+
+    # … main site config …
+
+    Alias /gallery /var/www/ost-gallery
+
+    <Directory /var/www/ost-gallery>
+        Options -Indexes
+        AllowOverride None
+        Require all granted
+        DirectoryIndex index.html
+    </Directory>
+
+    <Directory /var/www/ost-gallery/media>
+        Require all granted
+        <IfModule mod_expires.c>
+            ExpiresActive On
+            ExpiresDefault "access plus 30 days"
+        </IfModule>
+    </Directory>
+
+    ErrorDocument 404 /gallery/404.html
+</VirtualHost>
+```
+
+`.env` for this layout:
+
+```
+OUTPUT_DIR=/var/www/ost-gallery
+BASE_PATH=/gallery
+SITE_URL=https://www.meinserver.com/gallery
+```
+
+All internal links and asset URLs are prefixed with `BASE_PATH` at build time (`/gallery/static/…`, `/gallery/media/…`). No `mod_rewrite` is required.
 
 ### 4. Permissions
 
@@ -266,6 +313,12 @@ pip install --force-reinstall pillow
 ### Empty hero slideshow
 
 - Increase `FEATURED_COUNT` or add more recent dated images to `DATA_DIR`
+
+### CSS/JS/images 404 under a subpath
+
+- Set `BASE_PATH` in `.env` to match the Apache `Alias` (e.g. `/gallery`)
+- Set `SITE_URL` to the full public URL including the path
+- Re-run `python -m gallery build` (full index + build) after changing `BASE_PATH`
 
 ## Development
 

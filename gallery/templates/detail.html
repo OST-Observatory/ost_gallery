@@ -111,12 +111,12 @@
   {% endif %}
 
   <nav class="detail__nav" aria-label="Back navigation">
-    <a href="/{{ image.category }}/">{{ t('detail.backCategory') }} {{ category_title }}</a>
-    <a href="/">{{ t('detail.back') }}</a>
+    <a href="{{ pub('/' ~ image.category ~ '/') }}">{{ t('detail.backCategory') }} {{ category_title }}</a>
+    <a href="{{ pub('/') }}">{{ t('detail.back') }}</a>
   </nav>
 </article>
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/image-lightbox.js" defer></script>
+<script src="{{ pub('/static/js/image-lightbox.js') }}" defer></script>
 {% endblock %}

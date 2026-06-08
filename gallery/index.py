@@ -13,6 +13,7 @@ from gallery.config import Config, IMAGE_EXTENSIONS
 from gallery.errors import BuildLog
 from gallery.parse_txt import parse_objects_md, parse_txt_file
 from gallery.license import image_license_fields, resolve_license_key, site_license
+from gallery.paths import public_url
 from gallery.slug import make_slug
 
 REQUIRED_FIELDS = ("OBJECT", "DATE", "CLASS")
@@ -28,13 +29,18 @@ def _save_webp(img: Image.Image, dest: Path, max_width: int | None = None) -> No
     working.save(dest, "WEBP", quality=85, method=6)
 
 
-def _copy_original(image_path: Path, output_base: Path, rel_folder: str) -> str:
+def _copy_original(
+    image_path: Path,
+    output_base: Path,
+    rel_folder: str,
+    base_path: str,
+) -> str:
     stem = image_path.stem
     suffix = image_path.suffix.lower()
     dest = output_base / "media" / "original" / rel_folder / f"{stem}{suffix}"
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(image_path, dest)
-    return f"/media/original/{rel_folder}/{stem}{suffix}"
+    return public_url(base_path, f"/media/original/{rel_folder}/{stem}{suffix}")
 
 
 def _log_image_warnings(caught: list[warnings.WarningMessage], label: str, log: BuildLog) -> None:
@@ -52,13 +58,13 @@ def _process_image(
 ) -> tuple[str, str, str] | None:
     stem = image_path.stem
     label = f"{rel_folder}/{image_path.name}"
-    thumb_rel = f"/media/thumbs/{rel_folder}/{stem}.webp"
-    display_rel = f"/media/display/{rel_folder}/{stem}.webp"
+    thumb_rel = public_url(config.base_path, f"/media/thumbs/{rel_folder}/{stem}.webp")
+    display_rel = public_url(config.base_path, f"/media/display/{rel_folder}/{stem}.webp")
     thumb_dest = output_base / "media" / "thumbs" / rel_folder / f"{stem}.webp"
     display_dest = output_base / "media" / "display" / rel_folder / f"{stem}.webp"
 
     try:
-        full_rel = _copy_original(image_path, output_base, rel_folder)
+        full_rel = _copy_original(image_path, output_base, rel_folder, config.base_path)
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always", DecompressionBombWarning)
             with Image.open(image_path) as img:
@@ -68,7 +74,10 @@ def _process_image(
                 if config.display_max_width == 0:
                     display_dest.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(image_path, display_dest.with_suffix(image_path.suffix))
-                    display_rel = f"/media/display/{rel_folder}/{stem}{image_path.suffix.lower()}"
+                    display_rel = public_url(
+                        config.base_path,
+                        f"/media/display/{rel_folder}/{stem}{image_path.suffix.lower()}",
+                    )
                 else:
                     _save_webp(img, display_dest, config.display_max_width)
     except OSError as exc:
@@ -186,6 +195,11 @@ def run_index(config: Config, log: BuildLog | None = None) -> dict:
             license_raw,
             site_license(config),
         )
+        if license_fields["license"] and license_fields["license"].get("badge_src"):
+            license_fields["license"]["badge_src"] = public_url(
+                config.base_path,
+                license_fields["license"]["badge_src"],
+            )
 
         entry = {
             "id": rel_id,

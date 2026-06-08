@@ -4,7 +4,7 @@
   <ul class="image-grid">
     {% for image in images %}
     <li class="image-card">
-      <a href="/image/{{ image.slug }}/" class="image-card__link">
+      <a href="{{ pub('/image/' ~ image.slug ~ '/') }}" class="image-card__link">
         <img
           class="image-card__img"
           src="{{ image.thumbSrc }}"

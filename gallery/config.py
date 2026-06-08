@@ -7,6 +7,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from gallery.paths import normalize_base_path
+
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
 CATEGORY_SLUGS = [
@@ -75,6 +77,7 @@ class Config:
     slide_interval_ms: int
     thumb_max_width: int
     display_max_width: int
+    base_path: str
     site_url: str
     site_title: str
     site_license_short: str
@@ -131,6 +134,7 @@ def load_config(env_file: Path | None = None) -> Config:
         slide_interval_ms=_env_int("SLIDE_INTERVAL_MS", 6000, minimum=1000),
         thumb_max_width=_env_int("THUMB_MAX_WIDTH", 600, minimum=1),
         display_max_width=_env_int("DISPLAY_MAX_WIDTH", 2400, minimum=0),
+        base_path=normalize_base_path(os.environ.get("BASE_PATH", "")),
         site_url=os.environ.get("SITE_URL", "").rstrip("/"),
         site_title=os.environ.get("SITE_TITLE", "OST Gallery"),
         site_license_short=os.environ.get("SITE_LICENSE_SHORT", "CC BY-NC-SA 3.0"),

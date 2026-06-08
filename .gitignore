@@ -6,6 +6,7 @@ __pycache__/
 dist/
 dist.staging/
 dist.old/
+dist-subpath/
 *.staging/
 *.old/
 .env

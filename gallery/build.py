@@ -13,6 +13,7 @@ from gallery.errors import BuildLog
 from gallery.i18n import STRINGS, t
 from gallery.deploy import finalize_build
 from gallery.license import site_license
+from gallery.paths import public_url
 
 
 def _load_manifest(config: Config, log: BuildLog) -> dict | None:
@@ -55,15 +56,18 @@ def _copy_static(config: Config, log: BuildLog) -> bool:
         return False
 
 
-def _nav_items(active: str) -> list[dict]:
+def _nav_items(active: str, base_path: str) -> list[dict]:
+    def u(path: str) -> str:
+        return public_url(base_path, path)
+
     items = [
-        {"slug": "", "label": t("nav.all"), "href": "/", "key": "all"},
-        {"slug": "galaxies", "label": t("nav.galaxies"), "href": "/galaxies/", "key": "galaxies"},
-        {"slug": "nebulae", "label": t("nav.nebulae"), "href": "/nebulae/", "key": "nebulae"},
-        {"slug": "star-clusters", "label": t("nav.starClusters"), "href": "/star-clusters/", "key": "star-clusters"},
-        {"slug": "solar-system", "label": t("nav.solarSystem"), "href": "/solar-system/", "key": "solar-system"},
-        {"slug": "miscellaneous", "label": t("nav.miscellaneous"), "href": "/miscellaneous/", "key": "miscellaneous"},
-        {"slug": "about", "label": t("nav.about"), "href": "/about/", "key": "about"},
+        {"slug": "", "label": t("nav.all"), "href": u("/"), "key": "all"},
+        {"slug": "galaxies", "label": t("nav.galaxies"), "href": u("/galaxies/"), "key": "galaxies"},
+        {"slug": "nebulae", "label": t("nav.nebulae"), "href": u("/nebulae/"), "key": "nebulae"},
+        {"slug": "star-clusters", "label": t("nav.starClusters"), "href": u("/star-clusters/"), "key": "star-clusters"},
+        {"slug": "solar-system", "label": t("nav.solarSystem"), "href": u("/solar-system/"), "key": "solar-system"},
+        {"slug": "miscellaneous", "label": t("nav.miscellaneous"), "href": u("/miscellaneous/"), "key": "miscellaneous"},
+        {"slug": "about", "label": t("nav.about"), "href": u("/about/"), "key": "about"},
     ]
     for item in items:
         item["active"] = item["key"] == active
@@ -78,18 +82,21 @@ def _license_context(config: Config) -> dict | None:
         "short": info.short,
         "name": info.name,
         "url": info.url,
-        "badge_src": info.badge_src,
+        "badge_src": public_url(config.base_path, info.badge_src) if info.badge_src else "",
     }
 
 
 def _base_context(config: Config, manifest: dict, active: str) -> dict:
     meta = manifest.get("meta", {})
+    base_path = config.base_path
     return {
         "site_title": meta.get("siteTitle", config.site_title),
         "site_url": meta.get("siteUrl", config.site_url),
         "site_description": t("meta.siteDescription"),
+        "base_path": base_path,
+        "pub": lambda path: public_url(base_path, path),
         "site_license": _license_context(config),
-        "nav_items": _nav_items(active),
+        "nav_items": _nav_items(active, base_path),
         "t": t,
         "strings": STRINGS,
         "slide_interval_ms": meta.get("slideIntervalMs", config.slide_interval_ms),

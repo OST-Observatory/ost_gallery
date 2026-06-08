@@ -6,13 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ site_title }}{% endblock %}</title>
   <meta name="description" content="{% block description %}{{ site_description }}{% endblock %}">
-  <link rel="stylesheet" href="/static/css/global.css">
+  <link rel="stylesheet" href="{{ pub('/static/css/global.css') }}">
   {% block head %}{% endblock %}
 </head>
 <body>
   <header class="site-header">
     <div class="container header-inner">
-      <a class="site-logo" href="/">{{ site_title }}</a>
+      <a class="site-logo" href="{{ pub('/') }}">{{ site_title }}</a>
       <nav class="site-nav" aria-label="Main navigation">
         <ul class="nav-list">
           {% for item in nav_items %}
