@@ -19,6 +19,8 @@ Supported image formats: `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`
 
 The build **re-encodes** published media (thumbnails, display images, and full-resolution originals) to WebP. Raw source bytes are not copied into the site output, except for **animated GIF and animated WebP** (kept in their original format after validation so animation is preserved). Grid thumbnails always use the first frame as a static WebP.
 
+WebP cannot encode images with a side longer than **16383 pixels** (format limit, not configurable). Oversized stills (e.g. ultra-wide panoramas) are published as **JPEG** for display/original instead of being skipped; thumbnails are still WebP (downscaled).
+
 Symlinks under `DATA_DIR` are rejected.
 
 Videos (e.g. `.mp4`) are not supported.

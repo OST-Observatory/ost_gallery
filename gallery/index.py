@@ -25,6 +25,10 @@ _IMAGE_OPEN_ERRORS = (
 )
 
 
+# WebP hard limit from the format spec (libwebp) — cannot be raised.
+WEBP_MAX_SIDE = 16383
+
+
 def _is_animated(img: Image.Image) -> bool:
     return bool(getattr(img, "is_animated", False))
 
@@ -42,14 +46,72 @@ def _path_inside(path: Path, root: Path) -> bool:
         return False
 
 
-def _save_webp(img: Image.Image, dest: Path, max_width: int | None = None) -> None:
-    dest.parent.mkdir(parents=True, exist_ok=True)
+def _prepare_rgb(img: Image.Image, max_width: int | None = None) -> Image.Image:
     working = img.convert("RGB") if img.mode in ("RGBA", "P", "LA") else img
     if max_width and working.width > max_width:
         ratio = max_width / working.width
         new_size = (max_width, max(int(working.height * ratio), 1))
         working = working.resize(new_size, Image.Resampling.LANCZOS)
+    return working
+
+
+def _fits_webp(img: Image.Image) -> bool:
+    return img.width <= WEBP_MAX_SIDE and img.height <= WEBP_MAX_SIDE
+
+
+def _clamp_to_webp(img: Image.Image) -> Image.Image:
+    """Downscale so both sides fit the WebP format limit."""
+    if _fits_webp(img):
+        return img
+    scale = min(WEBP_MAX_SIDE / img.width, WEBP_MAX_SIDE / img.height)
+    new_size = (max(int(img.width * scale), 1), max(int(img.height * scale), 1))
+    return img.resize(new_size, Image.Resampling.LANCZOS)
+
+
+def _save_webp(img: Image.Image, dest: Path, max_width: int | None = None) -> None:
+    """Save as WebP, clamping to the format side limit when needed (e.g. thumbnails)."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    working = _clamp_to_webp(_prepare_rgb(img, max_width))
     working.save(dest, "WEBP", quality=85, method=6)
+
+
+def _save_jpeg(img: Image.Image, dest: Path) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    working = img.convert("RGB") if img.mode in ("RGBA", "P", "LA") else img
+    working.save(dest, "JPEG", quality=90, optimize=True)
+
+
+def _webp_encode_failed(exc: BaseException) -> bool:
+    msg = str(exc).lower()
+    return "webp" in msg and ("16383" in msg or "exceeds" in msg or "encoding error" in msg)
+
+
+def _save_reencoded(
+    img: Image.Image,
+    dest_webp: Path,
+    max_width: int | None = None,
+) -> tuple[Path, str]:
+    """Re-encode for publication.
+
+    Prefer WebP. If either side exceeds the WebP format limit (or WebP encoding
+    fails for that reason), fall back to JPEG so panoramas are not skipped.
+    Returns (dest_path, public_suffix) e.g. (…/x.webp, '.webp') or (…/x.jpg, '.jpg').
+    """
+    working = _prepare_rgb(img, max_width)
+    dest_jpg = dest_webp.with_suffix(".jpg")
+
+    if _fits_webp(working):
+        try:
+            dest_webp.parent.mkdir(parents=True, exist_ok=True)
+            working.save(dest_webp, "WEBP", quality=85, method=6)
+            return dest_webp, ".webp"
+        except OSError as exc:
+            if not _webp_encode_failed(exc):
+                raise
+            # Rare: encoder rejects despite size check — fall through to JPEG.
+
+    _save_jpeg(working, dest_jpg)
+    return dest_jpg, ".jpg"
 
 
 def _copy_validated(
@@ -124,7 +186,7 @@ def _process_image(
                 if preserve_animation:
                     img.seek(0)
 
-                # Thumbnails are always re-encoded (first frame for animated media).
+                # Thumbnails are always WebP (first frame for animated media; clamped).
                 _save_webp(img, thumb_dest, config.thumb_max_width)
 
                 if preserve_animation:
@@ -142,12 +204,24 @@ def _process_image(
                         f"/media/original/{rel_folder}/{stem}{suffix}",
                     )
                 else:
-                    # Full-resolution original is always re-encoded (never raw copy).
-                    _save_webp(img, full_dest, max_width=None)
-                    if config.display_max_width == 0:
-                        _save_webp(img, display_dest, max_width=None)
-                    else:
-                        _save_webp(img, display_dest, config.display_max_width)
+                    # Prefer WebP; fall back to JPEG if a side exceeds the WebP format limit.
+                    _, full_suffix = _save_reencoded(img, full_dest, max_width=None)
+                    full_rel = public_url(
+                        config.base_path,
+                        f"/media/original/{rel_folder}/{stem}{full_suffix}",
+                    )
+                    display_max = None if config.display_max_width == 0 else config.display_max_width
+                    _, display_suffix = _save_reencoded(img, display_dest, max_width=display_max)
+                    display_rel = public_url(
+                        config.base_path,
+                        f"/media/display/{rel_folder}/{stem}{display_suffix}",
+                    )
+                    if full_suffix != ".webp" or display_suffix != ".webp":
+                        log.warning(
+                            label,
+                            "Image exceeds WebP side limit "
+                            f"({WEBP_MAX_SIDE}px); published oversized variants as JPEG",
+                        )
     except _IMAGE_OPEN_ERRORS as exc:
         log.skip(label, f"Image processing failed: {exc}")
         return None
