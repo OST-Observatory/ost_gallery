@@ -17,6 +17,10 @@ Each observation night is a folder named `YYYY.MM.DD`. For every image file ther
 
 Supported image formats: `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`
 
+The build **re-encodes** published media (thumbnails, display images, and full-resolution originals) to WebP. Raw source bytes are not copied into the site output, except for animated GIFs (kept as GIF after validation so animation is preserved).
+
+Symlinks under `DATA_DIR` are rejected.
+
 Animated GIFs are kept as GIF for the detail and lightbox views (animation preserved). Grid thumbnails use the first frame as WebP.
 
 ## Metadata file (`.txt`)
@@ -79,7 +83,7 @@ CREDIT  = Image © Jane Doe
 LICENSE = BY-NC-SA-3.0
 ```
 
-`LICENSE` accepts known keys (`BY-NC-SA-3.0`, `BY-NC-SA-4.0`, `BY-3.0`, `BY-4.0`) or a full license URL. Shown on the detail page only when it differs from the site default or when `CREDIT` is set.
+`LICENSE` accepts known keys (`BY-NC-SA-3.0`, `BY-NC-SA-4.0`, `BY-3.0`, `BY-4.0`) or an `http(s)` license URL on an allowlisted host (`creativecommons.org`, `opensource.org`, `spdx.org`). Other URLs are ignored with a build warning. Shown on the detail page only when set.
 
 ### Example
 

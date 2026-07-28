@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from urllib.parse import urlparse
 
 from gallery.config import Config
 
@@ -31,6 +32,18 @@ KNOWN_LICENSES: dict[str, dict[str, str]] = {
     },
 }
 
+# Domains allowed when LICENSE is a custom URL (prevents open redirects / phishing links).
+LICENSE_URL_ALLOWED_HOSTS = frozenset(
+    {
+        "creativecommons.org",
+        "www.creativecommons.org",
+        "opensource.org",
+        "www.opensource.org",
+        "spdx.org",
+        "www.spdx.org",
+    }
+)
+
 
 @dataclass(frozen=True)
 class LicenseInfo:
@@ -38,6 +51,23 @@ class LicenseInfo:
     name: str
     url: str
     badge_src: str
+
+
+def _safe_license_url(url: str) -> str | None:
+    """Accept only http(s) URLs on an allowlisted host."""
+    raw = url.strip()
+    try:
+        parsed = urlparse(raw)
+    except ValueError:
+        return None
+    if parsed.scheme not in {"http", "https"}:
+        return None
+    if not parsed.netloc:
+        return None
+    host = parsed.hostname
+    if not host or host.lower() not in LICENSE_URL_ALLOWED_HOSTS:
+        return None
+    return raw
 
 
 def resolve_license_key(key: str) -> LicenseInfo | None:
@@ -50,11 +80,12 @@ def resolve_license_key(key: str) -> LicenseInfo | None:
             url=data["url"],
             badge_src=f"/static/img/cc/{data['badge']}.svg",
         )
-    if key.strip().lower().startswith("http"):
+    safe_url = _safe_license_url(key)
+    if safe_url:
         return LicenseInfo(
-            short=key.strip(),
-            name=key.strip(),
-            url=key.strip(),
+            short=safe_url,
+            name=safe_url,
+            url=safe_url,
             badge_src="",
         )
     return None
@@ -83,15 +114,8 @@ def image_license_fields(
     license_raw = license_raw.strip()
 
     license_info = resolve_license_key(license_raw) if license_raw else None
-    if license_raw and license_info is None and license_raw.lower().startswith("http"):
-        license_info = LicenseInfo(
-            short=license_raw,
-            name=license_raw,
-            url=license_raw,
-            badge_src="",
-        )
 
-    show_license = bool(license_raw.strip()) and bool(license_info)
+    show_license = bool(license_raw) and bool(license_info)
 
     return {
         "credit": credit,

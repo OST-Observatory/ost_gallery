@@ -5,6 +5,7 @@ import shutil
 from pathlib import Path
 
 import markdown
+import nh3
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from gallery.categories import category_label
@@ -14,6 +15,42 @@ from gallery.i18n import STRINGS, t
 from gallery.deploy import finalize_build
 from gallery.license import site_license
 from gallery.paths import public_url
+
+# Allowlist for Markdown HTML (about page). Scripts/event handlers are stripped by nh3.
+_ABOUT_ALLOWED_TAGS = {
+    "a",
+    "p",
+    "ul",
+    "ol",
+    "li",
+    "strong",
+    "em",
+    "b",
+    "i",
+    "code",
+    "pre",
+    "blockquote",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "hr",
+    "br",
+}
+_ABOUT_ALLOWED_ATTRIBUTES = {
+    "a": {"href", "title"},
+}
+
+
+def _sanitize_about_html(html: str) -> str:
+    return nh3.clean(
+        html,
+        tags=_ABOUT_ALLOWED_TAGS,
+        attributes=_ABOUT_ALLOWED_ATTRIBUTES,
+        link_rel="noopener noreferrer",
+    )
 
 
 def _load_manifest(config: Config, log: BuildLog) -> dict | None:
@@ -171,9 +208,11 @@ def run_build(config: Config, log: BuildLog | None = None) -> bool:
     about_path = config.content_dir / "about.md"
     about_html = ""
     if about_path.is_file():
-        about_html = markdown.markdown(
-            about_path.read_text(encoding="utf-8"),
-            extensions=["extra", "sane_lists"],
+        about_html = _sanitize_about_html(
+            markdown.markdown(
+                about_path.read_text(encoding="utf-8"),
+                extensions=["extra", "sane_lists"],
+            )
         )
 
     if not _write_html(

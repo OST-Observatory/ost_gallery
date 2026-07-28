@@ -67,6 +67,14 @@ def _env_bool(name: str, default: bool) -> bool:
     return default
 
 
+# Match Pillow's default (~89.5M). This is width×height after decode, not file size.
+# Large archives (100–250 MB on disk) are fine as long as pixel count stays under this.
+# Override via MAX_IMAGE_PIXELS if you have wider mosaics / huge plates.
+DEFAULT_MAX_IMAGE_PIXELS = 200_000_000
+# Optional pre-open size guard in bytes (0 = disabled). File size alone is not limited.
+DEFAULT_MAX_IMAGE_BYTES = 0
+
+
 @dataclass(frozen=True)
 class Config:
     data_dir: Path
@@ -77,6 +85,8 @@ class Config:
     slide_interval_ms: int
     thumb_max_width: int
     display_max_width: int
+    max_image_pixels: int
+    max_image_bytes: int
     base_path: str
     site_url: str
     site_title: str
@@ -134,6 +144,8 @@ def load_config(env_file: Path | None = None) -> Config:
         slide_interval_ms=_env_int("SLIDE_INTERVAL_MS", 6000, minimum=1000),
         thumb_max_width=_env_int("THUMB_MAX_WIDTH", 600, minimum=1),
         display_max_width=_env_int("DISPLAY_MAX_WIDTH", 2400, minimum=0),
+        max_image_pixels=_env_int("MAX_IMAGE_PIXELS", DEFAULT_MAX_IMAGE_PIXELS, minimum=1),
+        max_image_bytes=_env_int("MAX_IMAGE_BYTES", DEFAULT_MAX_IMAGE_BYTES, minimum=0),
         base_path=normalize_base_path(os.environ.get("BASE_PATH", "")),
         site_url=os.environ.get("SITE_URL", "").rstrip("/"),
         site_title=os.environ.get("SITE_TITLE", "OST Gallery"),

@@ -29,6 +29,16 @@ def _resolve_owner(config: Config) -> tuple[int | None, int | None]:
     return uid, gid
 
 
+def _set_mode(path: Path, mode: int) -> None:
+    """chmod without following symlinks when the platform supports it."""
+    try:
+        os.chmod(path, mode, follow_symlinks=False)
+    except (NotImplementedError, TypeError, ValueError):
+        # Some platforms (e.g. older macOS Python builds) reject follow_symlinks=False.
+        if not path.is_symlink():
+            path.chmod(mode)
+
+
 def apply_permissions(config: Config, root: Path, log: BuildLog) -> None:
     """Apply directory/file modes and optional ownership under root."""
     uid, gid = _resolve_owner(config)
@@ -39,28 +49,34 @@ def apply_permissions(config: Config, root: Path, log: BuildLog) -> None:
         log.warning(str(root), f"Unknown DEPLOY_GROUP {config.deploy_group!r}; skipping chown")
 
     for path in sorted(root.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+        if path.is_symlink():
+            log.warning(str(path), "Skipping symlink when applying deploy permissions")
+            continue
         try:
-            if path.is_dir() or path.is_symlink():
-                path.chmod(config.deploy_dir_mode)
+            if path.is_dir():
+                _set_mode(path, config.deploy_dir_mode)
             else:
-                path.chmod(config.deploy_file_mode)
+                _set_mode(path, config.deploy_file_mode)
             if uid is not None or gid is not None:
                 os.chown(
                     path,
                     uid if uid is not None else -1,
                     gid if gid is not None else -1,
+                    follow_symlinks=False,
                 )
         except OSError as exc:
             log.warning(str(path), f"Could not set permissions: {exc}")
 
     try:
-        root.chmod(config.deploy_dir_mode)
-        if uid is not None or gid is not None:
-            os.chown(
-                root,
-                uid if uid is not None else -1,
-                gid if gid is not None else -1,
-            )
+        if not root.is_symlink():
+            _set_mode(root, config.deploy_dir_mode)
+            if uid is not None or gid is not None:
+                os.chown(
+                    root,
+                    uid if uid is not None else -1,
+                    gid if gid is not None else -1,
+                    follow_symlinks=False,
+                )
     except OSError as exc:
         log.warning(str(root), f"Could not set permissions on build root: {exc}")
 

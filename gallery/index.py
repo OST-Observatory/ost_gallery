@@ -6,7 +6,7 @@ import warnings
 from pathlib import Path
 
 from PIL import Image
-from PIL.Image import DecompressionBombWarning
+from PIL.Image import DecompressionBombError, DecompressionBombWarning, UnidentifiedImageError
 
 from gallery.categories import class_to_category
 from gallery.config import Config, IMAGE_EXTENSIONS
@@ -17,10 +17,25 @@ from gallery.paths import public_url
 from gallery.slug import make_slug
 
 REQUIRED_FIELDS = ("OBJECT", "DATE", "CLASS")
+_IMAGE_OPEN_ERRORS = (
+    OSError,
+    DecompressionBombError,
+    UnidentifiedImageError,
+    ValueError,
+)
 
 
 def _is_animated_gif(img: Image.Image) -> bool:
     return bool(getattr(img, "is_animated", False))
+
+
+def _path_inside(path: Path, root: Path) -> bool:
+    """Return True if resolved path is inside resolved root (no symlink escape)."""
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
 
 
 def _save_webp(img: Image.Image, dest: Path, max_width: int | None = None) -> None:
@@ -33,24 +48,17 @@ def _save_webp(img: Image.Image, dest: Path, max_width: int | None = None) -> No
     working.save(dest, "WEBP", quality=85, method=6)
 
 
-def _copy_original(
+def _copy_validated(
     image_path: Path,
-    output_base: Path,
-    rel_folder: str,
-    base_path: str,
-) -> str:
-    stem = image_path.stem
-    suffix = image_path.suffix.lower()
-    dest = output_base / "media" / "original" / rel_folder / f"{stem}{suffix}"
+    dest: Path,
+) -> None:
+    """Copy a previously validated image without following symlinks."""
     dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(image_path, dest)
-    return public_url(base_path, f"/media/original/{rel_folder}/{stem}{suffix}")
+    shutil.copy2(image_path, dest, follow_symlinks=False)
 
 
-def _log_image_warnings(caught: list[warnings.WarningMessage], label: str, log: BuildLog) -> None:
-    for recorded in caught:
-        if issubclass(recorded.category, DecompressionBombWarning):
-            log.warning(label, f"Decompression bomb warning: {recorded.message}")
+def _had_decompression_bomb(caught: list[warnings.WarningMessage]) -> bool:
+    return any(issubclass(recorded.category, DecompressionBombWarning) for recorded in caught)
 
 
 def _process_image(
@@ -65,40 +73,80 @@ def _process_image(
     label = f"{rel_folder}/{image_path.name}"
     thumb_rel = public_url(config.base_path, f"/media/thumbs/{rel_folder}/{stem}.webp")
     display_rel = public_url(config.base_path, f"/media/display/{rel_folder}/{stem}.webp")
+    full_rel = public_url(config.base_path, f"/media/original/{rel_folder}/{stem}.webp")
     thumb_dest = output_base / "media" / "thumbs" / rel_folder / f"{stem}.webp"
     display_dest = output_base / "media" / "display" / rel_folder / f"{stem}.webp"
+    full_dest = output_base / "media" / "original" / rel_folder / f"{stem}.webp"
+
+    if image_path.is_symlink():
+        log.skip(label, "Symlink images are not allowed")
+        return None
+
+    if not _path_inside(image_path, config.data_dir):
+        log.skip(label, "Image path escapes DATA_DIR")
+        return None
+
+    if config.max_image_bytes > 0:
+        try:
+            size = image_path.stat().st_size
+        except OSError as exc:
+            log.skip(label, f"Cannot stat image: {exc}")
+            return None
+        if size > config.max_image_bytes:
+            log.skip(
+                label,
+                f"Image file too large ({size} bytes > MAX_IMAGE_BYTES={config.max_image_bytes})",
+            )
+            return None
+
+    previous_max_pixels = Image.MAX_IMAGE_PIXELS
+    Image.MAX_IMAGE_PIXELS = config.max_image_pixels
 
     try:
-        full_rel = _copy_original(image_path, output_base, rel_folder, config.base_path)
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always", DecompressionBombWarning)
             with Image.open(image_path) as img:
                 img.load()
-                _log_image_warnings(caught, label, log)
+                if _had_decompression_bomb(caught):
+                    log.skip(
+                        label,
+                        "Image exceeds MAX_IMAGE_PIXELS (decompression bomb); skipped",
+                    )
+                    return None
+
                 animated_gif = suffix == ".gif" and _is_animated_gif(img)
                 if animated_gif:
                     img.seek(0)
+
+                # Thumbnails are always re-encoded (first frame for animated GIFs).
                 _save_webp(img, thumb_dest, config.thumb_max_width)
+
                 if animated_gif:
+                    # Preserve animation only after validation; never follow symlinks.
                     gif_display = display_dest.with_suffix(".gif")
-                    gif_display.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(image_path, gif_display)
+                    gif_full = full_dest.with_suffix(".gif")
+                    _copy_validated(image_path, gif_display)
+                    _copy_validated(image_path, gif_full)
                     display_rel = public_url(
                         config.base_path,
                         f"/media/display/{rel_folder}/{stem}.gif",
                     )
-                elif config.display_max_width == 0:
-                    display_dest.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(image_path, display_dest.with_suffix(suffix))
-                    display_rel = public_url(
+                    full_rel = public_url(
                         config.base_path,
-                        f"/media/display/{rel_folder}/{stem}{suffix}",
+                        f"/media/original/{rel_folder}/{stem}.gif",
                     )
                 else:
-                    _save_webp(img, display_dest, config.display_max_width)
-    except OSError as exc:
+                    # Full-resolution original is always re-encoded (never raw copy).
+                    _save_webp(img, full_dest, max_width=None)
+                    if config.display_max_width == 0:
+                        _save_webp(img, display_dest, max_width=None)
+                    else:
+                        _save_webp(img, display_dest, config.display_max_width)
+    except _IMAGE_OPEN_ERRORS as exc:
         log.skip(label, f"Image processing failed: {exc}")
         return None
+    finally:
+        Image.MAX_IMAGE_PIXELS = previous_max_pixels
 
     return thumb_rel, display_rel, full_rel
 
@@ -113,6 +161,9 @@ def _collect_pairs(data_dir: Path, log: BuildLog) -> list[tuple[Path, Path, str]
         return pairs
 
     for date_dir in sorted(data_dir.iterdir()):
+        if date_dir.is_symlink():
+            log.warning(str(date_dir), "Skipping symlink date folder")
+            continue
         if not date_dir.is_dir():
             continue
 
@@ -121,6 +172,9 @@ def _collect_pairs(data_dir: Path, log: BuildLog) -> list[tuple[Path, Path, str]
         txts_by_stem: dict[str, Path] = {}
 
         for item in date_dir.iterdir():
+            if item.is_symlink():
+                log.warning(str(item), "Skipping symlink in dataset")
+                continue
             if not item.is_file():
                 continue
             stem = item.stem
@@ -137,6 +191,9 @@ def _collect_pairs(data_dir: Path, log: BuildLog) -> list[tuple[Path, Path, str]
             label = f"{date_dir.name}/{stem}"
 
             if image_path and txt_path:
+                if not _path_inside(image_path, data_dir) or not _path_inside(txt_path, data_dir):
+                    log.skip(label, "Dataset path escapes DATA_DIR")
+                    continue
                 pairs.append((image_path, txt_path, rel_folder))
                 seen_txt.add(txt_path)
             elif image_path:
@@ -200,7 +257,11 @@ def run_index(config: Config, log: BuildLog | None = None) -> dict:
         category = class_to_category(parsed.fields["CLASS"])
 
         objects_md_path = txt_path.with_suffix(".objects.md")
-        objects_from_md = parse_objects_md(objects_md_path, log)
+        if objects_md_path.is_symlink():
+            log.warning(str(objects_md_path), "Skipping symlink objects sidecar")
+            objects_from_md = []
+        else:
+            objects_from_md = parse_objects_md(objects_md_path, log)
         objects = [
             {"name": o.name, "description": o.description}
             for o in (parsed.objects + objects_from_md)

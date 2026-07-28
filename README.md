@@ -17,7 +17,7 @@ Invalid individual datasets are **logged and skipped**; the build continues with
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.11+Objects
 - Apache 2.4 (production)
 - Linux or macOS recommended
 
@@ -53,34 +53,27 @@ make dev
 
 Copy `.env.example` to `.env` and adjust:
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATA_DIR` | Path to image dataset | `./sample-data` |
-| `OUTPUT_DIR` | Final site output (Apache DocumentRoot) | `./dist` |
-| `STAGING_DIR` | Temporary build directory (default: `{OUTPUT_DIR}.staging`) | — |
-| `ATOMIC_BUILD` | Build to staging, then atomically replace `OUTPUT_DIR` (`1`/`0`) | `1` |
-| `DEPLOY_USER` | Optional owner after build (e.g. `deploy`) | — |
-| `DEPLOY_GROUP` | Optional group after build (e.g. `www-data`) | — |
-| `DEPLOY_DIR_MODE` | Directory mode (octal) | `755` |
-| `DEPLOY_FILE_MODE` | File mode (octal) | `644` |
-| `FEATURED_COUNT` | Recent images in home hero slideshow | `5` |
-| `SLIDE_INTERVAL_MS` | Slideshow interval (ms) | `6000` |
-| `THUMB_MAX_WIDTH` | Thumbnail width (px) | `600` |
-| `DISPLAY_MAX_WIDTH` | Detail image max width; `0` = copy original | `2400` |
-| `BASE_PATH` | URL prefix when not at site root (e.g. `/gallery`) | *(empty)* |
-| `SITE_URL` | Canonical site URL (optional); include `BASE_PATH` if set | — |
-| `SITE_TITLE` | Site title in header | `OST Gallery` |
-| `SITE_LICENSE_SHORT` | Short license label (e.g. CC BY-NC-SA 3.0) | `CC BY-NC-SA 3.0` |
-| `SITE_LICENSE_NAME` | Full license name in footer | Creative Commons … 3.0 License |
-| `SITE_LICENSE_URL` | License URL (footer link) | `https://creativecommons.org/licenses/by-nc-sa/3.0/` |
-| `SITE_LICENSE_BADGE` | Badge filename in `static/img/cc/` | `by-nc-sa` |
-| `LOG_FILE` | Optional append-only build log path | — |
+
+| Variable            | Description                                 | Default         |
+| ------------------- | ------------------------------------------- | --------------- |
+| `DATA_DIR`          | Path to image dataset                       | `./sample-data` |
+| `OUTPUT_DIR`        | Built site output directory                 | `./dist`        |
+| `FEATURED_COUNT`    | Recent images in home hero slideshow        | `5`             |
+| `SLIDE_INTERVAL_MS` | Slideshow interval (ms)                     | `6000`          |
+| `THUMB_MAX_WIDTH`   | Thumbnail width (px)                        | `600`           |
+| `DISPLAY_MAX_WIDTH` | Detail image max width; `0` = full size WebP | `2400`         |
+| `MAX_IMAGE_PIXELS`  | Skip images above this width×height count   | `200000000`      |
+| `MAX_IMAGE_BYTES`   | Optional max file size before open; `0` = off | `0`           |
+| `SITE_URL`          | Canonical site URL (optional)               | —               |
+| `SITE_TITLE`        | Site title in header                        | `OST Gallery`   |
+| `LOG_FILE`          | Optional append-only build log path         | —               |
+
 
 ## Data format
 
 See [docs/DATA_FORMAT.md](docs/DATA_FORMAT.md) for the full specification.
 
-Briefly: each date folder `YYYY.MM.DD` contains paired image and metadata files (`name.png` + `name.txt`, or `.jpg`, `.gif`, …). Required metadata keys: `OBJECT`, `DATE`, `CLASS`.
+Briefly: each date folder `YYYY.MM.DD` contains paired `name.png` (or `.jpg`) and `name.txt` files. Required metadata keys: `OBJECT`, `DATE`, `CLASS`.
 
 Optional repeated `OBJECT_INFO = Name | description` lines in each `.txt` file populate the **“Objects in this image”** section on detail pages. See [docs/DATA_FORMAT.md](docs/DATA_FORMAT.md) for formats (including description-only lines). The key `OBJECTS` is accepted as an alias.
 
@@ -106,7 +99,7 @@ Indexed 47 images, skipped 2, warnings 1
 ## Adding new images
 
 1. Create or use a date folder under `DATA_DIR`, e.g. `2026.06.03/`.
-2. Add `object_name.png` (or `.jpg`, `.gif`, …) and `object_name.txt`.
+2. Add `object_name.png` and `object_name.txt`.
 3. Run `python -m gallery build`.
 4. Deploy `OUTPUT_DIR` to your web server (see below).
 
@@ -114,11 +107,13 @@ Indexed 47 images, skipped 2, warnings 1
 
 Typical server layout:
 
-| Path | Purpose |
-|------|---------|
-| `/opt/ost_gallery` | Git checkout, venv, `.env` |
-| `/var/gallery/data` | `DATA_DIR` (existing dataset) |
-| `/var/www/ost-gallery` | Published `DocumentRoot` |
+
+| Path                   | Purpose                       |
+| ---------------------- | ----------------------------- |
+| `/opt/ost_gallery`     | Git checkout, venv, `.env`    |
+| `/var/gallery/data`    | `DATA_DIR` (existing dataset) |
+| `/var/www/ost-gallery` | Published `DocumentRoot`      |
+
 
 ### 1. Install and configure
 
@@ -135,16 +130,10 @@ Set in `.env`:
 ```
 DATA_DIR=/var/gallery/data
 OUTPUT_DIR=/var/www/ost-gallery
-BASE_PATH=
-SITE_URL=https://gallery.example.org
 LOG_FILE=/var/log/ost-gallery-build.log
 ```
 
-For a subpath install (e.g. `https://www.myserver.com/gallery`), set `BASE_PATH=/gallery` and `SITE_URL=https://www.myserver.com/gallery`. After changing `BASE_PATH`, run a full build (not `--skip-index`) so media URLs in `gallery.json` are updated.
-
-### 2. Build and deploy
-
-With `ATOMIC_BUILD=1` (default), the gallery is built into a fresh staging directory and only replaces the live site when the build succeeds:
+### 2. Build
 
 ```bash
 source /opt/ost_gallery/.venv/bin/activate
@@ -152,9 +141,11 @@ cd /opt/ost_gallery
 python -m gallery build
 ```
 
-Set `OUTPUT_DIR` to your Apache `DocumentRoot` (e.g. `/var/www/ost-gallery`). The build writes to `OUTPUT_DIR.staging`, applies permissions, then atomically swaps staging → `OUTPUT_DIR`. The previous site is removed; no manual `rsync --delete` is required.
+If you build into a staging directory first, sync to the docroot:
 
-For local development you can set `OUTPUT_DIR=./dist` and `ATOMIC_BUILD=1` in `.env`.
+```bash
+rsync -a --delete /opt/ost_gallery/dist/ /var/www/ost-gallery/
+```
 
 ### 3. Apache virtual host
 
@@ -163,14 +154,15 @@ For local development you can set `OUTPUT_DIR=./dist` and `ATOMIC_BUILD=1` in `.
     ServerName gallery.example.org
     DocumentRoot /var/www/ost-gallery
 
-    <IfModule mod_headers.c>
-        Header always set X-Content-Type-Options "nosniff"
-        Header always set X-Frame-Options "SAMEORIGIN"
-        Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    </IfModule>
+    # Requires: a2enmod headers
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set X-Frame-Options "DENY"
+    Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains"
+    Header always set Content-Security-Policy "default-src 'self'; img-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
 
     <Directory /var/www/ost-gallery>
-        Options -Indexes
+        Options -Indexes +SymLinksIfOwnerMatch
         AllowOverride None
         Require all granted
         DirectoryIndex index.html
@@ -192,66 +184,15 @@ For local development you can set `OUTPUT_DIR=./dist` and `ATOMIC_BUILD=1` in `.
 
 Directory-style URLs (`/nebulae/`, `/image/crab-nebula-2026-03-05/`) work without `mod_rewrite` because each route is a folder containing `index.html`.
 
-#### Subpath on an existing site (e.g. `/gallery`)
-
-When the gallery lives under a path on a larger site, Apache serves the built files via `Alias` instead of `DocumentRoot`:
-
-```apache
-<VirtualHost *:443>
-    ServerName www.meinserver.com
-    DocumentRoot /var/www/meinserver
-
-    # … main site config …
-
-    Alias /gallery /var/www/ost-gallery
-
-    # Default 404 for the main site (DocumentRoot)
-    ErrorDocument 404 /404.html
-
-    <Directory /var/www/ost-gallery>
-        Options -Indexes
-        AllowOverride None
-        Require all granted
-        DirectoryIndex index.html
-        # 404 only for URLs under /gallery (overrides VirtualHost default here)
-        ErrorDocument 404 /gallery/404.html
-    </Directory>
-
-    <Directory /var/www/ost-gallery/media>
-        Require all granted
-        <IfModule mod_expires.c>
-            ExpiresActive On
-            ExpiresDefault "access plus 30 days"
-        </IfModule>
-    </Directory>
-</VirtualHost>
-```
-
-`.env` for this layout:
-
-```
-OUTPUT_DIR=/var/www/ost-gallery
-BASE_PATH=/gallery
-SITE_URL=https://www.meinserver.com/gallery
-```
-
-All internal links and asset URLs are prefixed with `BASE_PATH` at build time (`/gallery/static/…`, `/gallery/media/…`). No `mod_rewrite` is required.
-
 ### 4. Permissions
 
-- Build user: read `DATA_DIR`, write parent of `OUTPUT_DIR` (for atomic rename)
+- Build user: read `DATA_DIR`, write `OUTPUT_DIR`
 - `www-data`: read-only on `/var/www/ost-gallery`
 
-Set in `.env` to apply ownership and modes automatically after each successful build:
-
+```bash
+chown -R deploy:www-data /var/www/ost-gallery
+chmod -R u=rwX,g=rX,o=rX /var/www/ost-gallery
 ```
-DEPLOY_USER=deploy
-DEPLOY_GROUP=www-data
-DEPLOY_DIR_MODE=755
-DEPLOY_FILE_MODE=644
-```
-
-`chown` requires appropriate privileges (often via `sudo` for the build cron job, or membership in `www-data` with group-writable docroot).
 
 ### 5. Automated rebuild (cron)
 
@@ -259,22 +200,22 @@ DEPLOY_FILE_MODE=644
 30 6 * * * deploy cd /opt/ost_gallery && .venv/bin/python -m gallery build >> /var/log/ost-gallery-build.log 2>&1
 ```
 
-One command rebuilds from scratch, deploys atomically, and applies permissions.
-
 HTTPS: use [Certbot](https://certbot.eff.org/) with the Apache plugin after the vhost is in place.
 
 ## Site structure
 
-| URL | Content |
-|-----|---------|
-| `/` | Hero slideshow (latest N images) + full grid |
-| `/galaxies/` | Galaxies category |
-| `/nebulae/` | Nebulae |
-| `/star-clusters/` | Star clusters |
-| `/solar-system/` | Solar system |
-| `/miscellaneous/` | Miscellaneous |
-| `/about/` | About page (from `content/about.md`) |
-| `/image/{slug}/` | Image detail page |
+
+| URL               | Content                                      |
+| ----------------- | -------------------------------------------- |
+| `/`               | Hero slideshow (latest N images) + full grid |
+| `/galaxies/`      | Galaxies category                            |
+| `/nebulae/`       | Nebulae                                      |
+| `/star-clusters/` | Star clusters                                |
+| `/solar-system/`  | Solar system                                 |
+| `/miscellaneous/` | Miscellaneous                                |
+| `/about/`         | About page (from `content/about.md`)         |
+| `/image/{slug}/`  | Image detail page                            |
+
 
 ## Troubleshooting
 
@@ -317,12 +258,6 @@ pip install --force-reinstall pillow
 
 - Increase `FEATURED_COUNT` or add more recent dated images to `DATA_DIR`
 
-### CSS/JS/images 404 under a subpath
-
-- Set `BASE_PATH` in `.env` to match the Apache `Alias` (e.g. `/gallery`)
-- Set `SITE_URL` to the full public URL including the path
-- Re-run `python -m gallery build` (full index + build) after changing `BASE_PATH`
-
 ## Development
 
 - Templates: `gallery/templates/`
@@ -336,6 +271,16 @@ Edit templates or CSS, then:
 python -m gallery build --skip-index   # fast re-render
 ```
 
+### Dependencies and security updates
+
+Pin or raise lower bounds in `requirements.txt` when installing. After changing dependencies, regenerate a lockfile if you use one (`pip-compile`, `uv lock`, …) and run:
+
+```bash
+pip install -r requirements.txt
+pip-audit
+```
+
+Treat `DATA_DIR` as untrusted input (especially when synced from cloud storage): the indexer rejects symlinks, re-encodes published images, and sanitizes Markdown HTML on the about page.
 ## License
 
 GNU General Public License v3.0 — see [LICENSE](LICENSE).
