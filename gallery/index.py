@@ -25,8 +25,12 @@ _IMAGE_OPEN_ERRORS = (
 )
 
 
-def _is_animated_gif(img: Image.Image) -> bool:
+def _is_animated(img: Image.Image) -> bool:
     return bool(getattr(img, "is_animated", False))
+
+
+# Formats where we preserve animation by copying after validation (not re-encoding).
+_ANIMATED_COPY_EXTENSIONS = {".gif", ".webp"}
 
 
 def _path_inside(path: Path, root: Path) -> bool:
@@ -114,26 +118,28 @@ def _process_image(
                     )
                     return None
 
-                animated_gif = suffix == ".gif" and _is_animated_gif(img)
-                if animated_gif:
+                preserve_animation = (
+                    suffix in _ANIMATED_COPY_EXTENSIONS and _is_animated(img)
+                )
+                if preserve_animation:
                     img.seek(0)
 
-                # Thumbnails are always re-encoded (first frame for animated GIFs).
+                # Thumbnails are always re-encoded (first frame for animated media).
                 _save_webp(img, thumb_dest, config.thumb_max_width)
 
-                if animated_gif:
+                if preserve_animation:
                     # Preserve animation only after validation; never follow symlinks.
-                    gif_display = display_dest.with_suffix(".gif")
-                    gif_full = full_dest.with_suffix(".gif")
-                    _copy_validated(image_path, gif_display)
-                    _copy_validated(image_path, gif_full)
+                    anim_display = display_dest.with_suffix(suffix)
+                    anim_full = full_dest.with_suffix(suffix)
+                    _copy_validated(image_path, anim_display)
+                    _copy_validated(image_path, anim_full)
                     display_rel = public_url(
                         config.base_path,
-                        f"/media/display/{rel_folder}/{stem}.gif",
+                        f"/media/display/{rel_folder}/{stem}{suffix}",
                     )
                     full_rel = public_url(
                         config.base_path,
-                        f"/media/original/{rel_folder}/{stem}.gif",
+                        f"/media/original/{rel_folder}/{stem}{suffix}",
                     )
                 else:
                     # Full-resolution original is always re-encoded (never raw copy).

@@ -17,11 +17,11 @@ Each observation night is a folder named `YYYY.MM.DD`. For every image file ther
 
 Supported image formats: `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`
 
-The build **re-encodes** published media (thumbnails, display images, and full-resolution originals) to WebP. Raw source bytes are not copied into the site output, except for animated GIFs (kept as GIF after validation so animation is preserved).
+The build **re-encodes** published media (thumbnails, display images, and full-resolution originals) to WebP. Raw source bytes are not copied into the site output, except for **animated GIF and animated WebP** (kept in their original format after validation so animation is preserved). Grid thumbnails always use the first frame as a static WebP.
 
 Symlinks under `DATA_DIR` are rejected.
 
-Animated GIFs are kept as GIF for the detail and lightbox views (animation preserved). Grid thumbnails use the first frame as WebP.
+Videos (e.g. `.mp4`) are not supported.
 
 ## Metadata file (`.txt`)
 
