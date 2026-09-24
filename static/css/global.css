@@ -152,8 +152,23 @@ button:focus-visible {
 }
 
 .site-footer__tagline,
-.site-footer__license {
+.site-footer__license,
+.site-footer__legal {
   margin: 0;
+}
+
+.site-footer__legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+
+.site-footer__legal a {
+  color: var(--text-muted);
+}
+
+.site-footer__legal a:hover {
+  color: var(--text);
 }
 
 .license-link {

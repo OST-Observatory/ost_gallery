@@ -25,6 +25,8 @@ STRINGS = {
     "meta.siteDescription": "Deep-sky and solar system images captured with our observatory telescopes.",
     "footer.tagline": "",
     "footer.licensePrefix": "Content on this site is licensed under a",
+    "footer.privacy": "Privacy",
+    "footer.legalNotice": "Legal notice",
 }
 
 

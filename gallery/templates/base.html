@@ -39,6 +39,11 @@
         {{ license_link(site_license, t('footer.licensePrefix')) }}
       </p>
       {% endif %}
+      {# Pages of the landing site at the web root: not prefixed via pub(). #}
+      <p class="site-footer__legal">
+        <a href="/static/datenschutz.html#en-gallery">{{ t('footer.privacy') }}</a>
+        <a href="/static/impressum.html">{{ t('footer.legalNotice') }}</a>
+      </p>
     </div>
   </footer>
 
