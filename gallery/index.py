@@ -13,6 +13,7 @@ from gallery.config import Config, IMAGE_EXTENSIONS
 from gallery.errors import BuildLog
 from gallery.parse_txt import parse_objects_md, parse_txt_file
 from gallery.license import image_license_fields, resolve_license_key, site_license
+from gallery.metadata import strip_metadata
 from gallery.paths import public_url
 from gallery.slug import make_slug
 
@@ -118,9 +119,15 @@ def _copy_validated(
     image_path: Path,
     dest: Path,
 ) -> None:
-    """Copy a previously validated image without following symlinks."""
+    """Copy a previously validated animated image without its metadata (EXIF/XMP/comments).
+
+    Symlinks were rejected before. Raises ValueError if the file cannot be parsed, so it is
+    skipped rather than published with metadata.
+    """
+    stripped = strip_metadata(image_path.read_bytes(), image_path.suffix.lower())
     dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(image_path, dest, follow_symlinks=False)
+    dest.write_bytes(stripped)
+    shutil.copystat(image_path, dest)
 
 
 def _had_decompression_bomb(caught: list[warnings.WarningMessage]) -> bool:

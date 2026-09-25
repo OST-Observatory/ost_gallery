@@ -1,4 +1,4 @@
-.PHONY: install index build dev clean
+.PHONY: install index build dev test clean
 
 install:
 	python3 -m venv .venv
@@ -12,6 +12,9 @@ build:
 
 dev: build
 	cd dist && ../.venv/bin/python -m http.server 8000
+
+test:
+	.venv/bin/python -m unittest discover -s tests -t .
 
 clean:
 	rm -rf dist gallery/data/gallery.json

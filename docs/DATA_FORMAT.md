@@ -37,7 +37,7 @@ Lines starting with `#` are comments. Fields use the format `KEY = value` (space
 | `CAT` | no | Catalogue designation(s), comma-separated |
 | `FILTER` | no | Filters used |
 | `EXTRA` | no | Additional notes about the capture (exposure, processing, …) |
-| `TAKEN` | no | Photographer / observer name |
+| `TAKEN` | no | Photographer / observer name — published on the detail page, only with the photographer's consent (see below) |
 | `OBJECT_INFO` | no | Object information for the detail page (repeatable, see below) |
 | `OBJECTS` | no | Alias for `OBJECT_INFO` (same format) |
 | `CREDIT` | no | Per-image credit line (shown on detail page only) |
@@ -75,6 +75,12 @@ OBJECT_INFO = This field also contains several background galaxies visible as fa
 ```
 
 The line may be repeated for several entries. The legacy key `OBJECTS` is accepted as an alias for `OBJECT_INFO`.
+
+### Photographer names and consent
+
+`TAKEN` and `CREDIT` publish personal names. Add them only when the photographer has agreed to publication of the image under its license together with the name; a first name is enough. If someone withdraws consent, remove the name (or the image) from `DATA_DIR` and rebuild — a full build removes it from the site. The central privacy policy (landing page, `#gallery`) states this.
+
+Embedded metadata never reaches the site: still images are re-encoded, animated GIF/WebP lose their comment, XMP and EXIF blocks.
 
 ### Per-image credit and license
 

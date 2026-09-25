@@ -2,13 +2,10 @@
 
 ## Data protection
 
-- **Animated GIF/WebP keep their metadata.** Still images are re-encoded by
-  Pillow and lose EXIF/XMP, but animated media are copied byte-for-byte
-  (`_copy_validated` → `shutil.copy2` in `gallery/index.py`, ~117-123 and
-  ~192-197). Comments, XMP or EXIF blocks (camera, software, possibly GPS or
-  author) end up in `dist/media/`. Strip metadata on copy, e.g.
-  `exiftool -all= -overwrite_original` on the copied files, or re-encode the
-  frames with Pillow without `exif`/`xmp`/`comment`.
-- **Photographer names are published.** The `TAKEN` field is shown on every
-  detail page ("Taken by"). Prefer first names only (or ask for consent to the
-  full name) and mention this in `docs/DATA_FORMAT.md`.
+- [x] **Animated GIF/WebP keep their metadata** — done (2026-09): `gallery/metadata.py` removes
+  comment/XMP/EXIF blocks losslessly when animated files are copied; files that cannot be parsed
+  are skipped instead of published. Tests: `make test`.
+- [x] **Photographer names are published** — no change needed: every photographer has consented to
+  publication of the image under its license together with the name. Documented in
+  `docs/DATA_FORMAT.md` (*Photographer names and consent*) and in the central privacy policy
+  (`#gallery`, legal basis consent).

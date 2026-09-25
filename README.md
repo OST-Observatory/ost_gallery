@@ -271,6 +271,12 @@ Edit templates or CSS, then:
 python -m gallery build --skip-index   # fast re-render
 ```
 
+Tests (standard library `unittest`, no extra dependencies):
+
+```bash
+make test   # or: .venv/bin/python -m unittest discover -s tests -t .
+```
+
 ### Dependencies and security updates
 
 Pin or raise lower bounds in `requirements.txt` when installing. After changing dependencies, regenerate a lockfile if you use one (`pip-compile`, `uv lock`, …) and run:
@@ -280,7 +286,7 @@ pip install -r requirements.txt
 pip-audit
 ```
 
-Treat `DATA_DIR` as untrusted input (especially when synced from cloud storage): the indexer rejects symlinks, re-encodes published images, and sanitizes Markdown HTML on the about page.
+Treat `DATA_DIR` as untrusted input (especially when synced from cloud storage): the indexer rejects symlinks, re-encodes published images (which drops EXIF/XMP), strips metadata blocks from animated GIF/WebP files that are published as they are (`gallery/metadata.py`), and sanitizes Markdown HTML on the about page.
 ## License
 
 GNU General Public License v3.0 — see [LICENSE](LICENSE).
