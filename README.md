@@ -66,7 +66,7 @@ Copy `.env.example` to `.env` and adjust:
 | `MAX_IMAGE_BYTES`   | Optional max file size before open; `0` = off | `0`           |
 | `SITE_URL`          | Canonical site URL (optional)               | —               |
 | `SITE_TITLE`        | Site title in header                        | `OST Gallery`   |
-| `LOG_FILE`          | Optional append-only build log path         | —               |
+| `LOG_FILE`          | Optional append-only build log file (no rotation; production logs to the journal instead, see cron below) | — |
 
 
 ## Data format
@@ -130,8 +130,9 @@ Set in `.env`:
 ```
 DATA_DIR=/var/gallery/data
 OUTPUT_DIR=/var/www/ost-gallery
-LOG_FILE=/var/log/ost-gallery-build.log
 ```
+
+Leave `LOG_FILE` unset in production: the build log goes to stderr, and the cron job below hands it to the journal, which the server keeps for 7 days like all other logs (see the central privacy policy). A `LOG_FILE` is never rotated.
 
 ### 2. Build
 
@@ -197,8 +198,10 @@ chmod -R u=rwX,g=rX,o=rX /var/www/ost-gallery
 ### 5. Automated rebuild (cron)
 
 ```cron
-30 6 * * * deploy cd /opt/ost_gallery && .venv/bin/python -m gallery build >> /var/log/ost-gallery-build.log 2>&1
+30 6 * * * deploy cd /opt/ost_gallery && systemd-cat -t ost-gallery-build .venv/bin/python -m gallery build
 ```
+
+Check the last runs with `journalctl -t ost-gallery-build --since -2d`. After switching from the old `>> /var/log/ost-gallery-build.log` line, delete that file.
 
 HTTPS: use [Certbot](https://certbot.eff.org/) with the Apache plugin after the vhost is in place.
 
@@ -221,7 +224,7 @@ HTTPS: use [Certbot](https://certbot.eff.org/) with the Apache plugin after the 
 
 ### Skipped images in build log
 
-Check stderr or `LOG_FILE` for lines like:
+Check the journal (`journalctl -t ost-gallery-build`), stderr or `LOG_FILE` for lines like:
 
 ```
 2026-06-05T07:00:00Z [ERROR] 2026.03.05/missing_meta: Image has no matching .txt metadata file
